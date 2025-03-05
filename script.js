@@ -1,136 +1,137 @@
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-var firebaseConfig = {
-  apiKey: "AIzaSyDpG7dDjrqV9ADVdT6hxvr9aRSfYhRC0sM",
-  authDomain: "cpeg-cd8d7.firebaseapp.com",
-  databaseURL: "https://cpeg-cd8d7.firebaseio.com",
-  projectId: "cpeg-cd8d7",
-  storageBucket: "cpeg-cd8d7.appspot.com",
-  messagingSenderId: "1067230698036",
-  appId: "1:1067230698036:web:179eb593d4e658e8660861",
-  measurementId: "G-D6PYXP9ZVP",
-};
+// Blackjack Game Logic
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-
-const startButton = document.getElementById("start-button");
-const hitButton = document.getElementById("hit-button");
-const standButton = document.getElementById("stand-button");
-
-let deck = [];
+// Global Variables
 let playerHand = [];
 let dealerHand = [];
+let deck = [];
+let gameOver = false;
 
-startButton.addEventListener("click", startGame);
-hitButton.addEventListener("click", playerHit);
-standButton.addEventListener("click", playerStand);
+const suits = ["♠", "♥", "♣", "♦"];
+const values = [
+  "A",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "J",
+  "Q",
+  "K",
+];
 
-function createDeck() {
-  const suits = ["♥", "♦", "♣", "♠"];
-  const values = [
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "J",
-    "Q",
-    "K",
-    "A",
-  ];
-  deck = [];
-  for (let suit of suits) {
-    for (let value of values) {
-      deck.push(`${value}${suit}`);
-    }
-  }
-  deck.sort(() => Math.random() - 0.5);
-}
-
+// Initialize the game
 function startGame() {
-  createDeck();
+  gameOver = false;
+  deck = createDeck();
+  shuffleDeck(deck);
   playerHand = [drawCard(), drawCard()];
   dealerHand = [drawCard(), drawCard()];
   updateUI();
-  hitButton.disabled = false;
-  standButton.disabled = false;
 }
 
-function drawCard() {
-  return deck.pop();
-}
-
-function updateUI() {
-  document.getElementById("player-hand").textContent =
-    "Player: " + playerHand.join(", ");
-  document.getElementById("dealer-hand").textContent =
-    "Dealer: " + dealerHand.join(", ");
-}
-
-function playerHit() {
-  playerHand.push(drawCard());
-  updateUI();
-  if (calculateHandValue(playerHand) > 21) {
-    document.getElementById("result").textContent =
-      "Player Busts! Dealer Wins!";
-    disableButtons();
-  }
-}
-
-function playerStand() {
-  while (calculateHandValue(dealerHand) < 17) {
-    dealerHand.push(drawCard());
-  }
-  determineWinner();
-}
-
-function calculateHandValue(hand) {
-  let value = 0;
-  let aces = 0;
-  for (let card of hand) {
-    let cardValue = card.slice(0, -1);
-    if (["J", "Q", "K"].includes(cardValue)) {
-      value += 10;
-    } else if (cardValue === "A") {
-      aces++;
-      value += 11;
-    } else {
-      value += parseInt(cardValue);
+// Create a new deck
+function createDeck() {
+  let newDeck = [];
+  for (let suit of suits) {
+    for (let value of values) {
+      newDeck.push({ suit, value });
     }
   }
-  while (value > 21 && aces > 0) {
-    value -= 10;
-    aces--;
+  return newDeck;
+}
+
+// Shuffle deck using Fisher-Yates algorithm
+function shuffleDeck(deck) {
+  for (let i = deck.length - 1; i > 0; i--) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
   }
-  return value;
 }
 
-function determineWinner() {
-  const playerValue = calculateHandValue(playerHand);
-  const dealerValue = calculateHandValue(dealerHand);
-  let result = "";
+// Draw a card from the deck
+function drawCard() {
+  return deck.length > 0 ? deck.pop() : null;
+}
 
-  if (playerValue > 21) {
-    result = "Player Busts! Dealer Wins!";
-  } else if (dealerValue > 21) {
-    result = "Dealer Busts! Player Wins!";
-  } else if (playerValue > dealerValue) {
-    result = "Player Wins!";
-  } else if (playerValue < dealerValue) {
-    result = "Dealer Wins!";
-  } else {
-    result = "Push!";
+// Calculate hand value
+function calculateHand(hand) {
+  let total = 0;
+  let aceCount = 0;
+
+  for (let card of hand) {
+    if (card.value === "A") {
+      aceCount++;
+      total += 11;
+    } else if (["J", "Q", "K"].includes(card.value)) {
+      total += 10;
+    } else {
+      total += parseInt(card.value);
+    }
   }
-  document.getElementById("result").textContent = result;
-  disableButtons();
+
+  // Adjust Aces from 11 to 1 if needed
+  while (total > 21 && aceCount > 0) {
+    total -= 10;
+    aceCount--;
+  }
+  return total;
 }
 
-function disableButtons() {
-  hitButton.disabled = true;
-  standButton.disabled = true;
+// Player draws a card
+function hit() {
+  if (!gameOver) {
+    playerHand.push(drawCard());
+    if (calculateHand(playerHand) > 21) {
+      gameOver = true;
+    }
+    updateUI();
+  }
 }
+
+// Player stands, dealer plays
+function stand() {
+  while (calculateHand(dealerHand) < 17) {
+    dealerHand.push(drawCard());
+  }
+  gameOver = true;
+  updateUI();
+}
+
+// Update UI elements
+function updateUI() {
+  document.getElementById("player-hand").textContent = `Player: ${displayHand(
+    playerHand
+  )}`;
+  document.getElementById("dealer-hand").textContent = `Dealer: ${
+    gameOver ? displayHand(dealerHand) : "[Hidden]"
+  }`;
+  document.getElementById("result").textContent = getGameResult();
+}
+
+// Display hand as text
+function displayHand(hand) {
+  return hand.map((card) => `${card.value}${card.suit}`).join(" ");
+}
+
+// Determine game result
+function getGameResult() {
+  let playerTotal = calculateHand(playerHand);
+  let dealerTotal = calculateHand(dealerHand);
+
+  if (playerTotal > 21) return "Bust! Dealer Wins!";
+  if (dealerTotal > 21) return "Dealer Busts! You Win!";
+  if (playerTotal > dealerTotal) return "You Win!";
+  if (playerTotal < dealerTotal) return "Dealer Wins!";
+  return "It's a Tie!";
+}
+
+// Start game on load
+startGame();
+
+document.getElementById("hit-btn").addEventListener("click", hit);
+document.getElementById("stand-btn").addEventListener("click", stand);
+document.getElementById("restart-btn").addEventListener("click", startGame);
