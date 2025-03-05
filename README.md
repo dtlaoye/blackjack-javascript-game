@@ -28,7 +28,7 @@ A simple Blackjack game built with **HTML, CSS, and JavaScript**.
 No installation required! Simply clone the repository and open `index.html` in a browser.
 
 ```sh
-git clone https://github.com/yourusername/blackjack-game.git
+git clone https://github.com/dtlaoye/blackjack-game.git
 cd blackjack-game
 open index.html
 ```
